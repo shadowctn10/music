@@ -9,7 +9,7 @@ from telegram.ext import (
 )
 
 # ====== تنظیمات ======
-BOT_TOKEN = "7830811506:AAHviqGsjxf1S57-W46F5bu9Rh9kuZIQ-fY"  # توکن ربات
+BOT_TOKEN = "7830811506:AAHviqGsjxf1S57-W46F5bu9Rh9kuZIQ-fY"  # یییتوکن ربات
 GENIUS_API_TOKEN = "1k3ljpOFJhSQs52wnj8MaAnfFqVfLGOzBXUhBakw7aD1SAvQsVqih4RK8ds8CLNx"  # توکن API از Genius
 SUDO_USERS = [5668163693, 987654321]  # آیدی عددی سودوها
 
