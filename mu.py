@@ -7,16 +7,11 @@ from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ChatMemberHandler,
     ContextTypes, filters
 )
-from flask import Flask, request
 
 # ====== تنظیمات ======
-BOT_TOKEN = "7830811506:AAEWDjFP49jFYmY0k8DNKFJSsTQ6GO8gB20"  # توکن ربات
+BOT_TOKEN = "7830811506:AAHviqGsjxf1S57-W46F5bu9Rh9kuZIQ-fY"  # توکن ربات
 GENIUS_API_TOKEN = "1k3ljpOFJhSQs52wnj8MaAnfFqVfLGOzBXUhBakw7aD1SAvQsVqih4RK8ds8CLNx"  # توکن API از Genius
 SUDO_USERS = [5668163693, 987654321]  # آیدی عددی سودوها
-WEBHOOK_URL = "https://music-xirm.onrender.com/webhook"  # URL عمومی و امن
-
-# Flask app for webhook
-app = Flask(__name__)
 
 # ====== بررسی سودو ======
 def is_sudo(user_id):
@@ -117,17 +112,8 @@ def main():
     application.add_handler(MessageHandler(filters.AUDIO, handle_audio))
     application.add_handler(CallbackQueryHandler(handle_callback))
 
-    # ثبت وبهوک
-    application.bot.set_webhook(WEBHOOK_URL)
-
-    print("✅ وبهوک تنظیم شد.")
-    return application
-
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    update = Update.de_json(request.get_json(force=True), main().bot)
-    main().process_update(update)
-    return "OK", 200
+    print("✅ ربات شروع به کار کرد...")
+    application.run_polling()
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8443)
+    main()
