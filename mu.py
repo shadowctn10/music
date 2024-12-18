@@ -1,4 +1,4 @@
-import os
+cimport os
 import requests
 from flask import Flask, request
 from pydub import AudioSegment
@@ -16,7 +16,7 @@ SUDO_USERS = [5668163693, 987654321]  # آیدی عددی سودوها
 WEBHOOK_URL = "https://music-xirn.onrender.com/webhook"  # دامنه Render شما
 
 
-# ====== راه‌اندازی Flask برای وب‌سرور ======
+# ====== راه‌اندازی Flask برای cوب‌سرور ======
 app = Flask(__name__)
 
 # ====== ایجاد Application تلگرام ======
