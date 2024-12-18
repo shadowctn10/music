@@ -1,21 +1,17 @@
 import os
 import requests
-from pydub import AudioSegment
 from bs4 import BeautifulSoup
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from pydub import AudioSegment
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatMemberUpdated
 from telegram.ext import (
-    Application, CommandHandler, MessageHandler, CallbackQueryHandler, ChatMemberHandler,
+    ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ChatMemberHandler,
     ContextTypes, filters
 )
-import asyncio
 
 # ====== تنظیمات ======
-BOT_TOKEN = "7830811506:AAHviqGsjxf1S57-W46F5bu9Rh9kuZIQ-fY"  # توکن ربات تلگرام
+BOT_TOKEN = "7830811506:AAHviqGsjxf1S57-W46F5bu9Rh9kuZIQ-fY"  # توکن ربات
 GENIUS_API_TOKEN = "1k3ljpOFJhSQs52wnj8MaAnfFqVfLGOzBXUhBakw7aD1SAvQsVqih4RK8ds8CLNx"  # توکن API از Genius
 SUDO_USERS = [5668163693, 987654321]  # آیدی عددی سودوها
-
-# ====== راه‌اندازی برنامه تلگرام ======
-application = Application.builder().token(BOT_TOKEN).build()
 
 # ====== بررسی سودو ======
 def is_sudo(user_id):
@@ -32,85 +28,101 @@ def create_demo(file_path):
         print(f"Error creating demo: {e}")
         return None
 
-# ====== دریافت لیریک از Genius ======
+# ====== دریافت لیریک از Genius و استخراج متن ======
 def get_lyrics(song_name):
     try:
         headers = {"Authorization": f"Bearer {GENIUS_API_TOKEN}"}
-        response = requests.get("https://api.genius.com/search", headers=headers, params={"q": song_name})
+        search_url = "https://api.genius.com/search"
+        response = requests.get(search_url, headers=headers, params={"q": song_name})
 
         if response.status_code == 200:
-            hits = response.json().get("response", {}).get("hits", [])
+            hits = response.json()["response"]["hits"]
             if hits:
                 lyrics_url = hits[0]["result"]["url"]
+
+                # استخراج متن لیریک از صفحه HTML
                 page = requests.get(lyrics_url)
                 soup = BeautifulSoup(page.content, "html.parser")
-                lyrics_div = soup.find("div", {"data-lyrics-container": "true"})
+                lyrics_div = soup.find("div", class_="lyrics") or soup.find("div", {"data-lyrics-container": "true"})
 
                 if lyrics_div:
-                    return lyrics_div.get_text(separator="\n").strip()
-        return "❌ لیریک یافت نشد."
+                    lyrics = lyrics_div.get_text(separator="\n").strip()
+                    return f"\ud83c\udfb5 *لیریک آهنگ:*\n\n{lyrics}"
+        return "\u274c لیریک یافت نشد."
     except Exception as e:
         print(f"Error fetching lyrics: {e}")
-        return "❌ خطا در ارتباط با سرور لیریک."
+        return "\u274c خطا در ارتباط با سرور لیریک."
 
-# ====== هندلر اضافه شدن به گروه ======
+# ====== محدودیت برای اضافه شدن به گروه ======
 async def check_new_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_member = update.chat_member
-    user_id = chat_member.from_user.id
-    chat_id = chat_member.chat.id
+    chat_member: ChatMemberUpdated = update.chat_member
+    if chat_member.new_chat_member.status == "member":
+        user_id = chat_member.from_user.id
+        chat_id = chat_member.chat.id
+        if not is_sudo(user_id):
+            await context.bot.leave_chat(chat_id)
+            print(f"\u274c ربات توسط کاربر غیرمجاز ({user_id}) اضافه شد و گروه را ترک کرد.")
 
-    if chat_member.new_chat_member.status == "member" and not is_sudo(user_id):
-        await context.bot.leave_chat(chat_id)
-        print(f"❌ ربات توسط کاربر غیرمجاز ({user_id}) اضافه شد و گروه را ترک کرد.")
-
-# ====== هندلر پیام‌های صوتی ======
+# ====== مدیریت فایل MP3 و ارسال ویس ======
 async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
     file_name = message.audio.file_name or "unknown_song"
+    user_id = message.from_user.id
 
     # دانلود فایل MP3
     audio_file = await message.audio.get_file()
     await audio_file.download_to_drive("input.mp3")
 
-    # تولید دمو
+    # برش یک دقیقه اول آهنگ
     demo_file = create_demo("input.mp3")
     os.remove("input.mp3")
 
     if demo_file:
-        keyboard = [[InlineKeyboardButton("🎵 Lyrics", callback_data=f"lyrics:{file_name}")]]
+        # طراحی دکمه لیریک
+        keyboard = [[InlineKeyboardButton("\ud83c\udfb5 Lyrics", callback_data=f"lyrics:{file_name}")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
+        # ارسال ویس با دکمه
         with open(demo_file, "rb") as voice:
-            await message.reply_voice(voice=voice, caption=file_name, reply_markup=reply_markup)
+            await message.reply_voice(voice=voice, caption=f"\ud83c\udfa7 {file_name}", reply_markup=reply_markup)
         os.remove(demo_file)
 
-# ====== هندلر درخواست لیریک ======
+# ====== ارسال لیریک به پیوی ======
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     song_name = query.data.split(":", 1)[1]
 
     await query.answer()
+    await context.bot.send_message(chat_id=query.from_user.id, text="\ud83d\udd0d در حال جستجوی لیریک...")
+
     lyrics = get_lyrics(song_name)
-    await context.bot.send_message(chat_id=query.from_user.id, text=lyrics)
+    await context.bot.send_message(chat_id=query.from_user.id, text=lyrics, parse_mode="Markdown")
 
 # ====== دستور /start ======
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🎵 سلام! فایل MP3 بفرست تا دموی آهنگ و لیریک آن را دریافت کنی.")
+    await update.message.reply_text("\ud83c\udfb5 سلام! فایل MP3 بفرست تا دموی آهنگ و لیریک آن را دریافت کنی.")
 
-# ====== ثبت هندلرها ======
-application.add_handler(CommandHandler("start", start))
-application.add_handler(ChatMemberHandler(check_new_chat_member, ChatMemberHandler.CHAT_MEMBER))
-application.add_handler(MessageHandler(filters.AUDIO, handle_audio))
-application.add_handler(CallbackQueryHandler(handle_callback))
+# ====== راه‌اندازی ربات ======
+def main():
+    PORT = int(os.getenv("PORT", 8443))  # گرفتن شماره پورت از متغیر محیطی یا پیش‌فرض 8443
+    WEBHOOK_URL = f"https://music-xirm.onrender.com/{BOT_TOKEN}"  # تنظیم آدرس وب‌هوک
 
-# ====== اجرای ربات ======
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
+
+    # هندلرها
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(ChatMemberHandler(check_new_chat_member, ChatMemberHandler.CHAT_MEMBER))
+    application.add_handler(MessageHandler(filters.AUDIO, handle_audio))
+    application.add_handler(CallbackQueryHandler(handle_callback))
+
+    print("\u2705 ربات شروع به کار کرد...")
+    application.run_webhook(
+        listen="0.0.0.0",  # گوش دادن به همه آدرس‌ها
+        port=PORT,          # پورت مشخص‌شده
+        url_path=BOT_TOKEN,  # مسیر URL برای وب‌هوک
+    )
+    application.bot.set_webhook(WEBHOOK_URL)
+
 if __name__ == "__main__":
-    async def main():
-        await application.initialize()
-        await application.start()
-        print("✅ Bot started in polling mode.")
-        await application.updater.start_polling()
-        await application.updater.idle()
-
-    asyncio.run(main())
+    main()
 
