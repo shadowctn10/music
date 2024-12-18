@@ -105,7 +105,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ====== راه‌اندازی ربات ======
 def main():
     PORT = int(os.getenv("PORT", 8443))  # گرفتن شماره پورت از متغیر محیطی یا پیش‌فرض 8443
-    WEBHOOK_URL = f"https://music-xirm.onrender.com/7830811506:AAHviqGsjxf1S57-W46F5bu9Rh9kuZIQ-fY"  # تنظیم آدرس وب‌هوک
+    WEBHOOK_URL = "https://music-xirm.onrender.com/7830811506:AAHviqGsjxf1S57-W46F5bu9Rh9kuZIQ-fY"  # تنظیم آدرس وب‌هوک
 
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
