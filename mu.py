@@ -8,23 +8,25 @@ from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ChatMemberHandler,
     ContextTypes, filters
 )
+import asyncio  # برای اجرای توابع async
 
 # ====== تنظیمات ======
-BOT_TOKEN = "7830811506:AAHviqGsjxf1S57-W46F5bu9Rh9kuZIQ-fY"  # یییتوکن ربات
+BOT_TOKEN = "7830811506:AAHviqGsjxf1S57-W46F5bu9Rh9kuZIQ-fY"  # توکن ربات تلگرام
 GENIUS_API_TOKEN = "1k3ljpOFJhSQs52wnj8MaAnfFqVfLGOzBXUhBakw7aD1SAvQsVqih4RK8ds8CLNx"  # توکن API از Genius
-SUDO_USERS = [5668163693, 987654321]  # آیدی عددی سودوها
-WEBHOOK_URL = "https://music-xirn.onrender.com/webhook"  # دامنه Render شما
+SUDO_USERS = [5668163693 , 987654321]  # آیدی عددی سودوها
+WEBHOOK_URL = "https://music-xirm.onrender.com/webhook"
 
 
-# ====== راه‌اندازی Flask برای cوب‌سرور ======
+
+# ====== راه‌اندازی Flask برای وب‌سرور ======
 app = Flask(__name__)
-
-# ====== ایجاد Application تلگرام ======
 application = ApplicationBuilder().token(BOT_TOKEN).build()
+
 
 # ====== بررسی سودو ======
 def is_sudo(user_id):
     return user_id in SUDO_USERS
+
 
 # ====== برش یک دقیقه از آهنگ ======
 def create_demo(file_path):
@@ -36,6 +38,7 @@ def create_demo(file_path):
     except Exception as e:
         print(f"Error creating demo: {e}")
         return None
+
 
 # ====== دریافت لیریک از Genius ======
 def get_lyrics(song_name):
@@ -61,6 +64,7 @@ def get_lyrics(song_name):
         print(f"Error fetching lyrics: {e}")
         return "❌ خطا در ارتباط با سرور لیریک."
 
+
 # ====== هندلر اضافه شدن به گروه ======
 async def check_new_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_member = update.chat_member
@@ -70,6 +74,7 @@ async def check_new_chat_member(update: Update, context: ContextTypes.DEFAULT_TY
     if chat_member.new_chat_member.status == "member" and not is_sudo(user_id):
         await context.bot.leave_chat(chat_id)
         print(f"❌ ربات توسط کاربر غیرمجاز ({user_id}) اضافه شد و گروه را ترک کرد.")
+
 
 # ====== هندلر پیام‌های صوتی ======
 async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -92,6 +97,7 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await message.reply_voice(voice=voice, caption=file_name, reply_markup=reply_markup)
         os.remove(demo_file)
 
+
 # ====== هندلر درخواست لیریک ======
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -101,15 +107,18 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lyrics = get_lyrics(song_name)
     await context.bot.send_message(chat_id=query.from_user.id, text=lyrics)
 
+
 # ====== دستور /start ======
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🎵 سلام! فایل MP3 بفرست تا دموی آهنگ و لیریک آن را دریافت کنی.")
+
 
 # ====== ثبت هندلرها ======
 application.add_handler(CommandHandler("start", start))
 application.add_handler(ChatMemberHandler(check_new_chat_member, ChatMemberHandler.CHAT_MEMBER))
 application.add_handler(MessageHandler(filters.AUDIO, handle_audio))
 application.add_handler(CallbackQueryHandler(handle_callback))
+
 
 # ====== راه‌اندازی وب‌سرور ======
 @app.route('/webhook', methods=['POST'])
@@ -118,11 +127,20 @@ def webhook():
     application.update_queue.put(update)
     return "OK", 200
 
+
 @app.route('/')
 def index():
     return "🎵 Bot is running!", 200
 
+
+# ====== راه‌اندازی Webhook ======
 if __name__ == "__main__":
-    application.bot.set_webhook(url=WEBHOOK_URL)
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    async def main():
+        await application.bot.set_webhook(url=WEBHOOK_URL)
+        print("✅ Webhook تنظیم شد.")
+
+        # اجرای وب‌سرور Flask
+        port = int(os.environ.get("PORT", 5000))
+        app.run(host="0.0.0.0", port=port)
+
+    asyncio.run(main())
