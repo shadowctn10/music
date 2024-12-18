@@ -7,11 +7,16 @@ from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ChatMemberHandler,
     ContextTypes, filters
 )
+from flask import Flask, request
 
 # ====== تنظیمات ======
-BOT_TOKEN = "7830811506:AAEWDjFP49jFYmY0k8DNKFJSsTQ6GO8gB20"  # توکن ربات
+BOT_TOKEN = "7830811506:AAHviqGsjxf1S57-W46F5bu9Rh9kuZIQ-fY"  # توکن ربات
 GENIUS_API_TOKEN = "1k3ljpOFJhSQs52wnj8MaAnfFqVfLGOzBXUhBakw7aD1SAvQsVqih4RK8ds8CLNx"  # توکن API از Genius
 SUDO_USERS = [5668163693, 987654321]  # آیدی عددی سودوها
+WEBHOOK_URL = "https://music-xirm.onrender.com/webhook"  # URL عمومی و امن
+
+# Flask app for webhook
+app = Flask(__name__)
 
 # ====== بررسی سودو ======
 def is_sudo(user_id):
@@ -47,11 +52,11 @@ def get_lyrics(song_name):
 
                 if lyrics_div:
                     lyrics = lyrics_div.get_text(separator="\n").strip()
-                    return f"\ud83c\udfb5 *لیریک آهنگ:*\n\n{lyrics}"
-        return "\u274c لیریک یافت نشد."
+                    return f"🎵 *لیریک آهنگ:*\n\n{lyrics}"
+        return "❌ لیریک یافت نشد."
     except Exception as e:
         print(f"Error fetching lyrics: {e}")
-        return "\u274c خطا در ارتباط با سرور لیریک."
+        return "❌ خطا در ارتباط با سرور لیریک."
 
 # ====== محدودیت برای اضافه شدن به گروه ======
 async def check_new_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -61,7 +66,7 @@ async def check_new_chat_member(update: Update, context: ContextTypes.DEFAULT_TY
         chat_id = chat_member.chat.id
         if not is_sudo(user_id):
             await context.bot.leave_chat(chat_id)
-            print(f"\u274c ربات توسط کاربر غیرمجاز ({user_id}) اضافه شد و گروه را ترک کرد.")
+            print(f"❌ ربات توسط کاربر غیرمجاز ({user_id}) اضافه شد و گروه را ترک کرد.")
 
 # ====== مدیریت فایل MP3 و ارسال ویس ======
 async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -79,12 +84,12 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if demo_file:
         # طراحی دکمه لیریک
-        keyboard = [[InlineKeyboardButton("\ud83c\udfb5 Lyrics", callback_data=f"lyrics:{file_name}")]]
+        keyboard = [[InlineKeyboardButton("🎵 Lyrics", callback_data=f"lyrics:{file_name}")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         # ارسال ویس با دکمه
         with open(demo_file, "rb") as voice:
-            await message.reply_voice(voice=voice, caption=f"\ud83c\udfa7 {file_name}", reply_markup=reply_markup)
+            await message.reply_voice(voice=voice, caption=f"🎧 {file_name}", reply_markup=reply_markup)
         os.remove(demo_file)
 
 # ====== ارسال لیریک به پیوی ======
@@ -93,20 +98,17 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     song_name = query.data.split(":", 1)[1]
 
     await query.answer()
-    await context.bot.send_message(chat_id=query.from_user.id, text="\ud83d\udd0d در حال جستجوی لیریک...")
+    await context.bot.send_message(chat_id=query.from_user.id, text="🔍 در حال جستجوی لیریک...")
 
     lyrics = get_lyrics(song_name)
     await context.bot.send_message(chat_id=query.from_user.id, text=lyrics, parse_mode="Markdown")
 
 # ====== دستور /start ======
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("\ud83c\udfb5 سلام! فایل MP3 بفرست تا دموی آهنگ و لیریک آن را دریافت کنی.")
+    await update.message.reply_text("🎵 سلام! فایل MP3 بفرست تا دموی آهنگ و لیریک آن را دریافت کنی.")
 
 # ====== راه‌اندازی ربات ======
 def main():
-    PORT = int(os.getenv("PORT", 8443))  # گرفتن شماره پورت از متغیر محیطی یا پیش‌فرض 8443
-    WEBHOOK_URL = "https://your-domain.onrender.com/webhook"
-
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
     # هندلرها
@@ -115,14 +117,17 @@ def main():
     application.add_handler(MessageHandler(filters.AUDIO, handle_audio))
     application.add_handler(CallbackQueryHandler(handle_callback))
 
-    print("\u2705 ربات شروع به کار کرد...")
-    application.run_webhook(
-        listen="0.0.0.0",  # گوش دادن به همه آدرس‌ها
-        port=PORT,          # پورت مشخص‌شده
-        url_path=BOT_TOKEN,  # مسیر URL برای وب‌هوک
-    )
+    # ثبت وبهوک
     application.bot.set_webhook(WEBHOOK_URL)
 
-if __name__ == "__main__":
-    main()
+    print("✅ وبهوک تنظیم شد.")
+    return application
 
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), main().bot)
+    main().process_update(update)
+    return "OK", 200
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8443)
