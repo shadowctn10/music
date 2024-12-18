@@ -9,7 +9,7 @@ from telegram.ext import (
 )
 
 # ====== تنظیمات ======
-BOT_TOKEN = "7830811506:AAHviqGsjxf1S57-W46F5bu9Rh9kuZIQ-fY"  # توکن ربات
+BOT_TOKEN = "7830811506:AAEWDjFP49jFYmY0k8DNKFJSsTQ6GO8gB20"  # توکن ربات
 GENIUS_API_TOKEN = "1k3ljpOFJhSQs52wnj8MaAnfFqVfLGOzBXUhBakw7aD1SAvQsVqih4RK8ds8CLNx"  # توکن API از Genius
 SUDO_USERS = [5668163693, 987654321]  # آیدی عددی سودوها
 
@@ -105,7 +105,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ====== راه‌اندازی ربات ======
 def main():
     PORT = int(os.getenv("PORT", 8443))  # گرفتن شماره پورت از متغیر محیطی یا پیش‌فرض 8443
-    WEBHOOK_URL = "https://music-xirm.onrender.com/7830811506:AAHviqGsjxf1S57-W46F5bu9Rh9kuZIQ-fY"  # تنظیم آدرس وب‌هوک
+    WEBHOOK_URL = "https://music-xirm.onrender.com/7830811506:AAEWDjFP49jFYmY0k8DNKFJSsTQ6GO8gB20"  # تنظیم آدرس وب‌هوک
 
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
