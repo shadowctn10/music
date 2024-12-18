@@ -1,4 +1,4 @@
-cimport os
+import os
 import requests
 from flask import Flask, request
 from pydub import AudioSegment
