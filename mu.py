@@ -9,9 +9,9 @@ from telegram.ext import (
 )
 
 # ====== تنظیمات ======
-BOT_TOKEN = "7830811506:AAEWDjFP49jFYmY0k8DNKFJSsTQ6GO8gB20"  # توکن ربات
-GENIUS_API_TOKEN = "1k3ljpOFJhSQs52wnj8MaAnfFqVfLGOzBXUhBakw7aD1SAvQsVqih4RK8ds8CLNx"  # توکن API از Genius
-SUDO_USERS = [5668163693, 987654321]  # آیدی عددی سودوها
+BOT_TOKEN = '7830811506:AAEmTDdQC3PmEG7wXqbTRonN5QH7mEb7OrM'
+GENIUS_API_KEY = '1k3ljpOFJhSQs52wnj8MaAnfFqVfLGOzBXUhBakw7aD1SAvQsVqih4RK8ds8CLN'
+SUDO_USERS = [5668163693]  # ID سودوها
 
 # ====== بررسی سودو ======
 def is_sudo(user_id):
